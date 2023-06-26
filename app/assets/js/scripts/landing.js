@@ -318,7 +318,7 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
         // Show this information to the user.
         setOverlayContent(
             'No Compatible<br>Java Installation Found',
-            `In order to join WesterosCraft, you need a 64-bit installation of Java ${effectiveJavaOptions.suggestedMajor}. Would you like us to install a copy?`,
+            `In order to join Wortenia, you need a 64-bit installation of Java ${effectiveJavaOptions.suggestedMajor}. Would you like us to install a copy?`,
             'Install Java',
             'Install Manually'
         )
@@ -338,7 +338,7 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
                 //$('#overlayDismiss').toggle(false)
                 setOverlayContent(
                     'Java is Required<br>to Launch',
-                    `A valid x64 installation of Java ${effectiveJavaOptions.suggestedMajor} is required to launch.<br><br>Please refer to our <a href="https://github.com/dscalzi/HeliosLauncher/wiki/Java-Management#manually-installing-a-valid-version-of-java">Java Management Guide</a> for instructions on how to manually install Java.`,
+                    `A valid x64 installation of Java ${effectiveJavaOptions.suggestedMajor} is required to launch.<br><br>Please refer to our <a href="https://github.com/multithefranky/WorteniaLauncher/wiki/Java-Management#manually-installing-a-valid-version-of-java">Java Management Guide</a> for instructions on how to manually install Java.`,
                     'I Understand',
                     'Go Back'
                 )
@@ -596,7 +596,7 @@ async function dlAsync(login = true) {
             if(SERVER_JOINED_REGEX.test(data)){
                 DiscordWrapper.updateDetails('Exploring the Realm!')
             } else if(GAME_JOINED_REGEX.test(data)){
-                DiscordWrapper.updateDetails('Sailing to Westeros!')
+                DiscordWrapper.updateDetails('Sailing to Wortenia!')
             }
         }
 
@@ -604,7 +604,7 @@ async function dlAsync(login = true) {
             data = data.trim()
             if(data.indexOf('Could not find or load main class net.minecraft.launchwrapper.Launch') > -1){
                 loggerLaunchSuite.error('Game launch failed, LaunchWrapper was not downloaded properly.')
-                showLaunchFailure('Error During Launch', 'The main file, LaunchWrapper, failed to download properly. As a result, the game cannot launch.<br><br>To fix this issue, temporarily turn off your antivirus software and launch the game again.<br><br>If you have time, please <a href="https://github.com/dscalzi/HeliosLauncher/issues">submit an issue</a> and let us know what antivirus software you use. We\'ll contact them and try to straighten things out.')
+                showLaunchFailure('Error During Launch', 'The main file, LaunchWrapper, failed to download properly. As a result, the game cannot launch.<br><br>To fix this issue, temporarily turn off your antivirus software and launch the game again.<br><br>If you have time, please <a href="https://github.com/multithefranky/WorteniaLauncher/issues">submit an issue</a> and let us know what antivirus software you use. We\'ll contact them and try to straighten things out.')
             }
         }
 

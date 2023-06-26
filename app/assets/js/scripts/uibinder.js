@@ -21,7 +21,8 @@ const VIEWS = {
     login: '#loginContainer',
     settings: '#settingsContainer',
     welcome: '#welcomeContainer',
-    waiting: '#waitingContainer'
+    waiting: '#waitingContainer',
+    worteniaLogin: '#worteniaLoginContainer',
 }
 
 // The currently shown view container.
@@ -91,9 +92,9 @@ async function showMainUI(data){
             } else {
                 loginOptionsCancelEnabled(false)
                 loginOptionsViewOnLoginSuccess = VIEWS.landing
-                loginOptionsViewOnLoginCancel = VIEWS.loginOptions
+                loginOptionsViewOnLoginCancel = VIEWS.worteniaLogin
                 currentView = VIEWS.loginOptions
-                $(VIEWS.loginOptions).fadeIn(1000)
+                $(VIEWS.worteniaLogin).fadeIn(1000)
             }
         }
 
@@ -352,7 +353,7 @@ async function validateSelectedAccount(){
                 }
                 
                 loginOptionsViewOnLoginSuccess = getCurrentView()
-                loginOptionsViewOnLoginCancel = VIEWS.loginOptions
+                loginOptionsViewOnLoginCancel = VIEWS.worteniaLogin
 
                 if(accLen > 0) {
                     loginOptionsViewOnCancel = getCurrentView()
@@ -378,7 +379,7 @@ async function validateSelectedAccount(){
                     loginOptionsCancelEnabled(false)
                 }
                 toggleOverlay(false)
-                switchView(getCurrentView(), VIEWS.loginOptions)
+                switchView(getCurrentView(), VIEWS.worteniaLogin)
             })
             setDismissHandler(() => {
                 if(accLen > 1){

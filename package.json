@@ -1,13 +1,13 @@
 {
-  "name": "helioslauncher",
+  "name": "wortenialauncher",
   "version": "2.0.4",
-  "productName": "Helios Launcher",
-  "description": "Modded Minecraft Launcher",
-  "author": "Daniel Scalzi (https://github.com/dscalzi/)",
+  "productName": "Wortenia Launcher",
+  "description": "Wortenia Launcher for easy login and use for server",
+  "author": "Francisco Alamo",
   "license": "UNLICENSED",
-  "homepage": "https://github.com/dscalzi/HeliosLauncher",
+  "homepage": "https://github.com/multithefranky/WorteniaLauncher",
   "bugs": {
-    "url": "https://github.com/dscalzi/HeliosLauncher/issues"
+    "url": "https://github.com/multithefranky/WorteniaLauncher/issues"
   },
   "private": true,
   "main": "index.js",
@@ -25,6 +25,7 @@
   "dependencies": {
     "@electron/remote": "^2.0.8",
     "adm-zip": "^0.5.9",
+    "appwrite": "^11.0.0",
     "discord-rpc-patch": "^4.0.1",
     "ejs": "^3.1.9",
     "ejs-electron": "^2.1.1",
@@ -35,6 +36,7 @@
     "helios-core": "~2.0.4",
     "helios-distribution-types": "^1.2.0",
     "jquery": "^3.6.4",
+    "prettier": "^2.8.8",
     "semver": "^7.4.0"
   },
   "devDependencies": {
@@ -44,6 +46,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dscalzi/HeliosLauncher.git"
+    "url": "git+https://github.com/multithefranky/WorteniaLauncher.git"
   }
 }

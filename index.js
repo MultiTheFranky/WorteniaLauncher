@@ -121,13 +121,13 @@ ipcMain.on(MSFT_OPCODE.OPEN_LOGIN, (ipcEvent, ...arguments_) => {
     msftAuthViewSuccess = arguments_[0]
     msftAuthViewOnClose = arguments_[1]
     msftAuthWindow = new BrowserWindow({
-        title: 'Microsoft Login',
-        backgroundColor: '#222222',
-        width: 520,
-        height: 600,
-        frame: true,
-        icon: getPlatformIcon('SealCircle')
-    })
+      title: "Microsoft Login",
+      backgroundColor: "#222222",
+      width: 520,
+      height: 600,
+      frame: true,
+      icon: getPlatformIcon("WorteniaLogo"),
+    });
 
     msftAuthWindow.on('closed', () => {
         msftAuthWindow = undefined
@@ -174,13 +174,13 @@ ipcMain.on(MSFT_OPCODE.OPEN_LOGOUT, (ipcEvent, uuid, isLastAccount) => {
     msftLogoutSuccess = false
     msftLogoutSuccessSent = false
     msftLogoutWindow = new BrowserWindow({
-        title: 'Microsoft Logout',
-        backgroundColor: '#222222',
-        width: 520,
-        height: 600,
-        frame: true,
-        icon: getPlatformIcon('SealCircle')
-    })
+      title: "Microsoft Logout",
+      backgroundColor: "#222222",
+      width: 520,
+      height: 600,
+      frame: true,
+      icon: getPlatformIcon("WorteniaLogo"),
+    });
 
     msftLogoutWindow.on('closed', () => {
         msftLogoutWindow = undefined
@@ -223,17 +223,17 @@ let win
 function createWindow() {
 
     win = new BrowserWindow({
-        width: 980,
-        height: 552,
-        icon: getPlatformIcon('SealCircle'),
-        frame: false,
-        webPreferences: {
-            preload: path.join(__dirname, 'app', 'assets', 'js', 'preloader.js'),
-            nodeIntegration: true,
-            contextIsolation: false
-        },
-        backgroundColor: '#171614'
-    })
+      width: 980,
+      height: 552,
+      icon: getPlatformIcon("WorteniaLogo"),
+      frame: false,
+      webPreferences: {
+        preload: path.join(__dirname, "app", "assets", "js", "preloader.js"),
+        nodeIntegration: true,
+        contextIsolation: false,
+      },
+      backgroundColor: "#171614",
+    });
     remoteMain.enable(win.webContents)
 
     ejse.data('bkid', Math.floor((Math.random() * fs.readdirSync(path.join(__dirname, 'app', 'assets', 'images', 'backgrounds')).length)))
