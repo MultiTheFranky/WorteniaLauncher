@@ -4,7 +4,8 @@
 // Requirements
 const cp                      = require('child_process')
 const crypto                  = require('crypto')
-const { URL }                 = require('url')
+const { URL } = require('url')
+const fs                     = require('fs-extra')
 const {
     MojangRestAPI,
     getServerStatus
@@ -303,17 +304,22 @@ function showLaunchFailure(title, desc){
  * @param {boolean} launchAfter Whether we should begin to launch after scanning. 
  */
 async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
-
     setLaunchDetails('Checking system info..')
     toggleLaunchArea(true)
     setLaunchPercentage(0, 100)
+
+    console.log(ConfigManager.getDataDirectory(), effectiveJavaOptions.supported)
 
     const jvmDetails = await discoverBestJvmInstallation(
         ConfigManager.getDataDirectory(),
         effectiveJavaOptions.supported
     )
 
-    if(jvmDetails == null) {
+    const isInstalled = await fs.pathExists(
+        `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\jdk-17.0.7+7`
+    )
+
+    if (jvmDetails == null && !isInstalled) {
         // If the result is null, no valid Java installation was found.
         // Show this information to the user.
         setOverlayContent(
@@ -325,12 +331,15 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
         setOverlayHandler(() => {
             setLaunchDetails('Preparing Java Download..')
             toggleOverlay(false)
-            
+
             try {
                 downloadJava(effectiveJavaOptions, launchAfter)
-            } catch(err) {
+            } catch (err) {
                 loggerLanding.error('Unhandled error in Java Download', err)
-                showLaunchFailure('Error During Java Download', 'See console (CTRL + Shift + i) for more details.')
+                showLaunchFailure(
+                    'Error During Java Download',
+                    'See console (CTRL + Shift + i) for more details.'
+                )
             }
         })
         setDismissHandler(() => {
@@ -357,8 +366,13 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
         toggleOverlay(true, true)
     } else {
         // Java installation found, use this to launch the game.
-        const javaExec = javaExecFromRoot(jvmDetails.path)
-        ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), javaExec)
+        const javaExec = javaExecFromRoot(
+            `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\jdk-17.0.7+7`
+        )
+        ConfigManager.setJavaExecutable(
+            ConfigManager.getSelectedServer(),
+            javaExec
+        )
         ConfigManager.save()
 
         // We need to make sure that the updated value is on the settings UI.
@@ -368,11 +382,10 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
 
         // TODO Callback hell, refactor
         // TODO Move this out, separate concerns.
-        if(launchAfter){
+        if (launchAfter) {
             await dlAsync()
         }
     }
-
 }
 
 async function downloadJava(effectiveJavaOptions, launchAfter = true) {
