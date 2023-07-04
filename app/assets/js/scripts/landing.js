@@ -2,8 +2,8 @@
  * Script for landing.ejs
  */
 // Requirements
-const cp                      = require('child_process')
-const crypto                  = require('crypto')
+const crypto = require('crypto')
+const AdmZip = require('adm-zip')
 const { URL } = require('url')
 const fs                     = require('fs-extra')
 const {
@@ -33,6 +33,7 @@ const {
 // Internal Requirements
 const DiscordWrapper          = require('./assets/js/discordwrapper')
 const ProcessBuilder          = require('./assets/js/processbuilder')
+const { inspect, promisify } = require('util')
 
 // Launch Elements
 const launch_content          = document.getElementById('launch_content')
@@ -308,66 +309,51 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
     toggleLaunchArea(true)
     setLaunchPercentage(0, 100)
 
-    console.log(ConfigManager.getDataDirectory(), effectiveJavaOptions.supported)
-
-    const jvmDetails = await discoverBestJvmInstallation(
-        ConfigManager.getDataDirectory(),
-        effectiveJavaOptions.supported
-    )
-
     const isInstalled = await fs.pathExists(
-        `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\jdk-17.0.7+7`
+        `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\bin`
     )
 
-    if (jvmDetails == null && !isInstalled) {
-        // If the result is null, no valid Java installation was found.
-        // Show this information to the user.
-        setOverlayContent(
-            'No Compatible<br>Java Installation Found',
-            `In order to join Wortenia, you need a 64-bit installation of Java ${effectiveJavaOptions.suggestedMajor}. Would you like us to install a copy?`,
-            'Install Java',
-            'Install Manually'
-        )
-        setOverlayHandler(() => {
-            setLaunchDetails('Preparing Java Download..')
-            toggleOverlay(false)
+    if (!isInstalled) {
+        // Create the directory if it doesn't exist
+        await fs.ensureDir(`${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17`)
+        // Pipe the response to the directory
+        setLaunchDetails('Downloading Java..')
+        await downloadFile(
+            'https://cdn.wortenia.companialince.com/zulu17.zip',
+            `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\zulu17.zip`,
+            async (progress) => {
+                setDownloadPercentage(Math.round(progress.percent * 100))
+                if (progress.percent === 1) {
+                    setLaunchDetails('Unzipping Java..')
+                    const zip = new AdmZip(`${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\zulu17.zip`)
+                    zip.extractAllTo(`${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17`)
+                    // Delete the zip file
+                    await fs.remove(`${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\zulu17.zip`)
 
-            try {
-                downloadJava(effectiveJavaOptions, launchAfter)
-            } catch (err) {
-                loggerLanding.error('Unhandled error in Java Download', err)
-                showLaunchFailure(
-                    'Error During Java Download',
-                    'See console (CTRL + Shift + i) for more details.'
-                )
-            }
-        })
-        setDismissHandler(() => {
-            $('#overlayContent').fadeOut(250, () => {
-                //$('#overlayDismiss').toggle(false)
-                setOverlayContent(
-                    'Java is Required<br>to Launch',
-                    `A valid x64 installation of Java ${effectiveJavaOptions.suggestedMajor} is required to launch.<br><br>Please refer to our <a href="https://github.com/multithefranky/WorteniaLauncher/wiki/Java-Management#manually-installing-a-valid-version-of-java">Java Management Guide</a> for instructions on how to manually install Java.`,
-                    'I Understand',
-                    'Go Back'
-                )
-                setOverlayHandler(() => {
-                    toggleLaunchArea(false)
-                    toggleOverlay(false)
-                })
-                setDismissHandler(() => {
-                    toggleOverlay(false, true)
+                    const extractedDirectory = (await fs.readdir(`${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17`))[0]
 
+                    //Move all files and folders from the unzipped folder to the zulu17 folder
+                    const files = await fs.readdir(
+                        `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\${extractedDirectory}`
+                    )
+                    for (const file of files) {
+                        await fs.move(
+                            `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\${extractedDirectory}\\${file}`,
+                            `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\${file}`
+                        )
+                    }
+                    // Delete the unzipped folder
+                    await fs.remove(
+                        `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\${extractedDirectory}`
+                    )
                     asyncSystemScan(effectiveJavaOptions, launchAfter)
-                })
-                $('#overlayContent').fadeIn(250)
-            })
-        })
-        toggleOverlay(true, true)
+                }
+            }
+        )
     } else {
         // Java installation found, use this to launch the game.
         const javaExec = javaExecFromRoot(
-            `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\jdk-17.0.7+7`
+            `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17`
         )
         ConfigManager.setJavaExecutable(
             ConfigManager.getSelectedServer(),
