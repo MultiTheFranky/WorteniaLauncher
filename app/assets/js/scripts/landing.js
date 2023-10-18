@@ -305,60 +305,62 @@ function showLaunchFailure(title, desc){
  * @param {boolean} launchAfter Whether we should begin to launch after scanning. 
  */
 async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
+
     setLaunchDetails('Checking system info..')
     toggleLaunchArea(true)
     setLaunchPercentage(0, 100)
 
-    const isInstalled = await fs.pathExists(
-        `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\bin`
+    const jvmDetails = await discoverBestJvmInstallation(
+        ConfigManager.getDataDirectory(),
+        effectiveJavaOptions.supported
     )
 
-    if (!isInstalled) {
-        // Create the directory if it doesn't exist
-        await fs.ensureDir(`${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17`)
-        // Pipe the response to the directory
-        setLaunchDetails('Downloading Java..')
-        await downloadFile(
-            'https://cdn.wortenia.companialince.com/zulu17.zip',
-            `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\zulu17.zip`,
-            async (progress) => {
-                setDownloadPercentage(Math.round(progress.percent * 100))
-                if (progress.percent === 1) {
-                    setLaunchDetails('Unzipping Java..')
-                    const zip = new AdmZip(`${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\zulu17.zip`)
-                    zip.extractAllTo(`${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17`)
-                    // Delete the zip file
-                    await fs.remove(`${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\zulu17.zip`)
-
-                    const extractedDirectory = (await fs.readdir(`${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17`))[0]
-
-                    //Move all files and folders from the unzipped folder to the zulu17 folder
-                    const files = await fs.readdir(
-                        `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\${extractedDirectory}`
-                    )
-                    for (const file of files) {
-                        await fs.move(
-                            `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\${extractedDirectory}\\${file}`,
-                            `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\${file}`
-                        )
-                    }
-                    // Delete the unzipped folder
-                    await fs.remove(
-                        `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17\\${extractedDirectory}`
-                    )
-                    asyncSystemScan(effectiveJavaOptions, launchAfter)
-                }
-            }
+    if(jvmDetails == null) {
+        // If the result is null, no valid Java installation was found.
+        // Show this information to the user.
+        setOverlayContent(
+            'No Compatible<br>Java Installation Found',
+            `In order to join Wortenia, you need a 64-bit installation of Java ${effectiveJavaOptions.suggestedMajor}. Would you like us to install a copy?`,
+            'Install Java',
+            'Install Manually'
         )
+        setOverlayHandler(() => {
+            setLaunchDetails('Preparing Java Download..')
+            toggleOverlay(false)
+            
+            try {
+                downloadJava(effectiveJavaOptions, launchAfter)
+            } catch(err) {
+                loggerLanding.error('Unhandled error in Java Download', err)
+                showLaunchFailure('Error During Java Download', 'See console (CTRL + Shift + i) for more details.')
+            }
+        })
+        setDismissHandler(() => {
+            $('#overlayContent').fadeOut(250, () => {
+                //$('#overlayDismiss').toggle(false)
+                setOverlayContent(
+                    'Java is Required<br>to Launch',
+                    `A valid x64 installation of Java ${effectiveJavaOptions.suggestedMajor} is required to launch.<br><br>Please refer to our <a href="https://github.com/multithefranky/WorteniaLauncher/wiki/Java-Management#manually-installing-a-valid-version-of-java">Java Management Guide</a> for instructions on how to manually install Java.`,
+                    'I Understand',
+                    'Go Back'
+                )
+                setOverlayHandler(() => {
+                    toggleLaunchArea(false)
+                    toggleOverlay(false)
+                })
+                setDismissHandler(() => {
+                    toggleOverlay(false, true)
+
+                    asyncSystemScan(effectiveJavaOptions, launchAfter)
+                })
+                $('#overlayContent').fadeIn(250)
+            })
+        })
+        toggleOverlay(true, true)
     } else {
         // Java installation found, use this to launch the game.
-        const javaExec = javaExecFromRoot(
-            `${process.env.APPDATA}\\.wortenia\\runtime\\x64\\zulu-17`
-        )
-        ConfigManager.setJavaExecutable(
-            ConfigManager.getSelectedServer(),
-            javaExec
-        )
+        const javaExec = javaExecFromRoot(jvmDetails.path)
+        ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), javaExec)
         ConfigManager.save()
 
         // We need to make sure that the updated value is on the settings UI.
@@ -368,75 +370,12 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
 
         // TODO Callback hell, refactor
         // TODO Move this out, separate concerns.
-        if (launchAfter) {
+        if(launchAfter){
             await dlAsync()
         }
     }
 }
 
-async function downloadJava(effectiveJavaOptions, launchAfter = true) {
-
-    // TODO Error handling.
-    // asset can be null.
-    const asset = await latestOpenJDK(
-        effectiveJavaOptions.suggestedMajor,
-        ConfigManager.getDataDirectory(),
-        effectiveJavaOptions.distribution)
-
-    if(asset == null) {
-        throw new Error('Failed to find OpenJDK distribution.')
-    }
-
-    let received = 0
-    await downloadFile(asset.url, asset.path, ({ transferred }) => {
-        received = transferred
-        setDownloadPercentage(Math.trunc((transferred/asset.size)*100))
-    })
-    setDownloadPercentage(100)
-
-    if(received != asset.size) {
-        loggerLanding.warn(`Java Download: Expected ${asset.size} bytes but received ${received}`)
-        if(!await validateLocalFile(asset.path, asset.algo, asset.hash)) {
-            log.error(`Hashes do not match, ${asset.id} may be corrupted.`)
-            // Don't know how this could happen, but report it.
-            throw new Error('Downloaded JDK has bad hash, file may be corrupted.')
-        }
-    }
-
-    // Extract
-    // Show installing progress bar.
-    remote.getCurrentWindow().setProgressBar(2)
-
-    // Wait for extration to complete.
-    const eLStr = 'Extracting Java'
-    let dotStr = ''
-    setLaunchDetails(eLStr)
-    const extractListener = setInterval(() => {
-        if(dotStr.length >= 3){
-            dotStr = ''
-        } else {
-            dotStr += '.'
-        }
-        setLaunchDetails(eLStr + dotStr)
-    }, 750)
-
-    const newJavaExec = await extractJdk(asset.path)
-
-    // Extraction complete, remove the loading from the OS progress bar.
-    remote.getCurrentWindow().setProgressBar(-1)
-
-    // Extraction completed successfully.
-    ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), newJavaExec)
-    ConfigManager.save()
-
-    clearInterval(extractListener)
-    setLaunchDetails('Java Installed!')
-
-    // TODO Callback hell
-    // Refactor the launch functions
-    asyncSystemScan(effectiveJavaOptions, launchAfter)
-
-}
 
 // Keep reference to Minecraft Process
 let proc
