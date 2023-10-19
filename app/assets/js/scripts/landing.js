@@ -376,6 +376,70 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true){
     }
 }
 
+async function downloadJava(effectiveJavaOptions, launchAfter = true) {
+
+    // TODO Error handling.
+    // asset can be null.
+    const asset = await latestOpenJDK(
+        effectiveJavaOptions.suggestedMajor,
+        ConfigManager.getDataDirectory(),
+        effectiveJavaOptions.distribution)
+
+    if(asset == null) {
+        throw new Error('Failed to find OpenJDK distribution.')
+    }
+
+    let received = 0
+    await downloadFile(asset.url, asset.path, ({ transferred }) => {
+        received = transferred
+        setDownloadPercentage(Math.trunc((transferred/asset.size)*100))
+    })
+    setDownloadPercentage(100)
+
+    if(received != asset.size) {
+        loggerLanding.warn(`Java Download: Expected ${asset.size} bytes but received ${received}`)
+        if(!await validateLocalFile(asset.path, asset.algo, asset.hash)) {
+            log.error(`Hashes do not match, ${asset.id} may be corrupted.`)
+            // Don't know how this could happen, but report it.
+            throw new Error('Downloaded JDK has bad hash, file may be corrupted.')
+        }
+    }
+
+    // Extract
+    // Show installing progress bar.
+    remote.getCurrentWindow().setProgressBar(2)
+
+    // Wait for extration to complete.
+    const eLStr = 'Extracting Java'
+    let dotStr = ''
+    setLaunchDetails(eLStr)
+    const extractListener = setInterval(() => {
+        if(dotStr.length >= 3){
+            dotStr = ''
+        } else {
+            dotStr += '.'
+        }
+        setLaunchDetails(eLStr + dotStr)
+    }, 750)
+
+    const newJavaExec = await extractJdk(asset.path)
+
+    // Extraction complete, remove the loading from the OS progress bar.
+    remote.getCurrentWindow().setProgressBar(-1)
+
+    // Extraction completed successfully.
+    ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), newJavaExec)
+    ConfigManager.save()
+
+    clearInterval(extractListener)
+    setLaunchDetails('Java Installed!')
+
+    // TODO Callback hell
+    // Refactor the launch functions
+    asyncSystemScan(effectiveJavaOptions, launchAfter)
+
+}
+
 
 // Keep reference to Minecraft Process
 let proc
